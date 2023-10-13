@@ -3,8 +3,8 @@ library(tidyverse)
 library(tidymodels)
 library(embed)
 
-ama_train <- vroom("C:/School/Stat348/AmazonEmployeeAccess/train.csv")
-ama_test <- vroom("C:/School/Stat348/AmazonEmployeeAccess/test.csv")
+ama_train <- vroom("./train.csv")
+ama_test <- vroom("./test.csv")
 
 ama_train <- ama_train %>%
   mutate(ACTION = as.factor(ACTION))

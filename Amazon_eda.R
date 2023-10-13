@@ -15,3 +15,4 @@ ggplot(ama_train) +
 
 ggplot(data=ama_train) +
   geom_mosaic(aes(x=ama_train$ROLE_TITLE), fill=ama_train$ACTION)
+#mmiceli99
