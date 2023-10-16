@@ -2,6 +2,15 @@ library(vroom)
 library(tidyverse)
 library(tidymodels)
 library(embed)
+ibrary(doParallel)
+
+parallel::detectCores() #How many cores do I have?
+cl <- makePSOCKcluster(4)
+registerDoParallel(cl)
+
+
+
+
 
 ama_train <- vroom("./train.csv")
 ama_test <- vroom("./test.csv")
@@ -34,8 +43,8 @@ amazon_workflow <- workflow() %>%
   add_model(my_mod)
 
 ## Grid of values to tune over
-tuning_grid <- grid_regular(penalty(),
-                            mixture(),
+tuning_grid <- grid_regular(mtry(),
+                            min_n(),
                             levels = 5) ## L^2 total tuning possibilities
 
 ## Split data for CV
@@ -63,4 +72,4 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
 vroom_write(x=ama_predictions, file="./PenLogReg.csv", delim=",")
-
+stopCluster(cl)
