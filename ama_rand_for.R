@@ -71,5 +71,5 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   mutate( Id = row_number()) %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
-vroom_write(x=ama_predictions, file="./PenLogReg.csv", delim=",")
+vroom_write(x=ama_predictions, file="./RandFor.csv", delim=",")
 stopCluster(cl)
