@@ -35,15 +35,15 @@ baked <- bake(prep, new_data = ama_train)
 my_mod <- rand_forest(mtry = tune(),
                       min_n=tune(),
                       trees=500) %>%
-set_engine("ranger") %>%
-set_mode("classification")
+            set_engine("ranger") %>%
+            set_mode("classification")
 
 amazon_workflow <- workflow() %>%
   add_recipe(my_recipe) %>%
   add_model(my_mod)
 
 ## Grid of values to tune over
-tuning_grid <- grid_regular(mtry(),
+tuning_grid <- grid_regular(mtry(range=c(1,10)),
                             min_n(),
                             levels = 5) ## L^2 total tuning possibilities
 
