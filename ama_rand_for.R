@@ -2,7 +2,7 @@ library(vroom)
 library(tidyverse)
 library(tidymodels)
 library(embed)
-ibrary(doParallel)
+library(doParallel)
 
 parallel::detectCores() #How many cores do I have?
 cl <- makePSOCKcluster(4)
