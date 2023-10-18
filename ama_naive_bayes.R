@@ -2,10 +2,12 @@ library(vroom)
 library(tidyverse)
 library(tidymodels)
 library(embed)
+library(discrim)
+library(naivebayes)
 library(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
-cl <- makePSOCKcluster(1) # num_cores to use
+cl <- makePSOCKcluster(4) # num_cores to use
 registerDoParallel(cl)
 
 
@@ -29,26 +31,24 @@ my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
 prep <- prep(my_recipe)
 baked <- bake(prep, new_data = ama_train)
 
-my_mod <- rand_forest(mtry = tune(),
-                      min_n=tune(),
-                      trees=500) %>%
-            set_engine("ranger") %>%
-            set_mode("classification")
+nb_model <- naive_Bayes(Laplace=tune(), smoothness=tune()) %>%
+              set_mode("classification") %>%
+              set_engine("naivebayes") # install discrim library for the naivebayes eng
 
-amazon_workflow <- workflow() %>%
-  add_recipe(my_recipe) %>%
-  add_model(my_mod)
+nb_wf <- workflow() %>%
+add_recipe(my_recipe) %>%
+add_model(nb_model)
 
 ## Grid of values to tune over
-tuning_grid <- grid_regular(mtry(range=c(1,10)),
-                            min_n(),
+tuning_grid <- grid_regular(Laplace(),
+                            smoothness(),
                             levels = 5) ## L^2 total tuning possibilities
 
 ## Split data for CV
 folds <- vfold_cv(ama_train, v = 5, repeats=1)
 
 ## Run the CV
-CV_results <- amazon_workflow %>%
+CV_results <- nb_wf %>%
   tune_grid(resamples=folds,
             grid=tuning_grid,
             metrics=metric_set(roc_auc)) #Or leave metrics NULL
@@ -59,7 +59,7 @@ bestTune <- CV_results %>%
 
 ## Finalize the Workflow & fit it
 final_wf <-
-  amazon_workflow %>%
+  nb_wf %>%
   finalize_workflow(bestTune) %>%
   fit(data=ama_train)
 
@@ -68,5 +68,5 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   mutate( Id = row_number()) %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
-vroom_write(x=ama_predictions, file="./RandFor.csv", delim=",")
+vroom_write(x=ama_predictions, file="./naiveBayes.csv", delim=",")
 stopCluster(cl)
