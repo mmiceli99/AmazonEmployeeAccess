@@ -4,7 +4,7 @@ library(tidymodels)
 library(embed)
 library(discrim)
 library(naivebayes)
-library(doParallel)
+#(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
 #cl <- makePSOCKcluster(4) # num_cores to use
@@ -31,24 +31,23 @@ my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
 prep <- prep(my_recipe)
 baked <- bake(prep, new_data = ama_train)
 
-nb_model <- naive_Bayes(Laplace=tune(), smoothness=tune()) %>%
-              set_mode("classification") %>%
-              set_engine("naivebayes") # install discrim library for the naivebayes eng
+## knn model
+knn_model <- nearest_neighbor(neighbors=tune()) %>% # set or tune
+  set_mode("classification") %>%
+set_engine("kknn")
 
-nb_wf <- workflow() %>%
+knn_wf <- workflow() %>%
 add_recipe(my_recipe) %>%
-add_model(nb_model)
-
+add_model(knn_model)
 ## Grid of values to tune over
-tuning_grid <- grid_regular(Laplace(),
-                            smoothness(),
+tuning_grid <- grid_regular(neighbors(),
                             levels = 5) ## L^2 total tuning possibilities
 
 ## Split data for CV
 folds <- vfold_cv(ama_train, v = 5, repeats=1)
 
 ## Run the CV
-CV_results <- nb_wf %>%
+CV_results <- knn_wf %>%
   tune_grid(resamples=folds,
             grid=tuning_grid,
             metrics=metric_set(roc_auc)) #Or leave metrics NULL
@@ -68,5 +67,5 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   mutate( Id = row_number()) %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
-vroom_write(x=ama_predictions, file="./naiveBayes.csv", delim=",")
+vroom_write(x=ama_predictions, file="./knn.csv", delim=",")
 #stopCluster(cl)
