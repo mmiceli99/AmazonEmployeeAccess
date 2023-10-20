@@ -5,10 +5,10 @@ library(embed)
 library(discrim)
 library(naivebayes)
 library(kknn)
-(doParallel)
+library(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
-cl <- makePSOCKcluster(4) # num_cores to use
+cl <- makePSOCKcluster(10) # num_cores to use
 registerDoParallel(cl)
 
 
