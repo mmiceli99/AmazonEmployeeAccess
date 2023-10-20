@@ -4,11 +4,12 @@ library(tidymodels)
 library(embed)
 library(discrim)
 library(naivebayes)
-#(doParallel)
+library(kknn)
+(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
-#cl <- makePSOCKcluster(4) # num_cores to use
-#registerDoParallel(cl)
+cl <- makePSOCKcluster(4) # num_cores to use
+registerDoParallel(cl)
 
 
 ama_train <- vroom("./train.csv")
@@ -19,7 +20,8 @@ ama_train <- ama_train %>%
 my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
   step_mutate_at(all_numeric_predictors(), fn = factor) %>% # turn all numeric features into factors
   #step_mutate_at(ACTION, fn = factor) %>%
-  step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
+  step_other(all_nominal_predictors(), threshold = .001) %>%
+  step_normalize() %>%# combines categorical values that occur <5% into an "other" value
   #step_dummy(all_nominal_predictors()) %>% # dummy variable encoding
   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) #target encoding
 # also step_lencode_glm() and step_lencode_bayes()
@@ -58,7 +60,7 @@ bestTune <- CV_results %>%
 
 ## Finalize the Workflow & fit it
 final_wf <-
-  nb_wf %>%
+  knn_wf %>%
   finalize_workflow(bestTune) %>%
   fit(data=ama_train)
 
@@ -68,4 +70,4 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
 vroom_write(x=ama_predictions, file="./knn.csv", delim=",")
-#stopCluster(cl)
+stopCluster(cl)
