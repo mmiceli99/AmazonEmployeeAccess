@@ -5,7 +5,7 @@ library(embed)
 library(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
-cl <- makePSOCKcluster(1) # num_cores to use
+cl <- makePSOCKcluster(4) # num_cores to use
 registerDoParallel(cl)
 
 
@@ -15,7 +15,8 @@ ama_test <- vroom("./test.csv")
 ama_train <- ama_train %>%
   mutate(ACTION = as.factor(ACTION))
 my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
-  step_mutate_at(all_numeric_predictors(), fn = factor) %>% # turn all numeric features into factors
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  step_rm(ROLE_ROLLUP_1, ROLE_ROLLUP_2) %>%# turn all numeric features into factors
   #step_mutate_at(ACTION, fn = factor) %>%
   step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
   #step_dummy(all_nominal_predictors()) %>% # dummy variable encoding
@@ -28,6 +29,7 @@ my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
 # apply the recipe to your data
 prep <- prep(my_recipe)
 baked <- bake(prep, new_data = ama_train)
+
 
 my_mod <- rand_forest(mtry = tune(),
                       min_n=tune(),
