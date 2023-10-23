@@ -65,8 +65,18 @@ Type 'q()' to quit R.
 ✖ dplyr::lag()      masks stats::lag()
 ✖ yardstick::spec() masks readr::spec(), vroom::spec()
 ✖ recipes::step()   masks stats::step()
-• Use suppressPackageStartupMessages() to eliminate package startup messages
+• Dig deeper into tidy modeling with R at https://www.tmwr.org
 > library(embed)
+> library(discrim)
+
+Attaching package: ‘discrim’
+
+The following object is masked from ‘package:dials’:
+
+    smoothness
+
+> library(naivebayes)
+naivebayes 0.9.7 loaded
 > library(doParallel)
 Loading required package: foreach
 
@@ -80,8 +90,8 @@ Loading required package: iterators
 Loading required package: parallel
 > 
 > #parallel::detectCores() #How many cores do I have?
-> cl <- makePSOCKcluster(1) # num_cores to use
-> registerDoParallel(cl)
+> #cl <- makePSOCKcluster(4) # num_cores to use
+> #registerDoParallel(cl)
 > 
 > 
 > ama_train <- vroom("./train.csv")
@@ -108,7 +118,10 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 +   #step_mutate_at(ACTION, fn = factor) %>%
 +   step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
 +   #step_dummy(all_nominal_predictors()) %>% # dummy variable encoding
-+   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) #target encoding
++   
++   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
++   step_normalize(all_predictors()) %>%
++   step_pca(all_predictors(), threshold=.9) #Threshold is between 0 and 1#target encoding
 > # also step_lencode_glm() and step_lencode_bayes()
 > 
 > 
@@ -118,42 +131,46 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 > prep <- prep(my_recipe)
 > baked <- bake(prep, new_data = ama_train)
 > 
-> my_mod <- rand_forest(mtry = tune(),
-+                       min_n=tune(),
-+                       trees=500) %>%
-+             set_engine("ranger") %>%
-+             set_mode("classification")
+> nb_model <- naive_Bayes(Laplace=tune(), smoothness=tune()) %>%
++   set_mode("classification") %>%
++   set_engine("naivebayes") # install discrim library for the naivebayes eng
 > 
-> amazon_workflow <- workflow() %>%
+> nb_wf <- workflow() %>%
 +   add_recipe(my_recipe) %>%
-+   add_model(my_mod)
++   add_model(nb_model)
 > 
 > ## Grid of values to tune over
-> tuning_grid <- grid_regular(mtry(range=c(1,10)),
-+                             min_n(),
+> tuning_grid <- grid_regular(Laplace(),
++                             smoothness(),
 +                             levels = 5) ## L^2 total tuning possibilities
 > 
 > ## Split data for CV
 > folds <- vfold_cv(ama_train, v = 5, repeats=1)
 > 
 > ## Run the CV
-> CV_results <- amazon_workflow %>%
+> CV_results <- nb_wf %>%
 +   tune_grid(resamples=folds,
 +             grid=tuning_grid,
 +             metrics=metric_set(roc_auc)) #Or leave metrics NULL
-→ A | warning: 10 columns were requested but there were 9 predictors in the data. 9 will be used.
-There were issues with some computations   A: x1
-There were issues with some computations   A: x2
-There were issues with some computations   A: x3
-There were issues with some computations   A: x4
-There were issues with some computations   A: x5
-There were issues with some computations   A: x6
-There were issues with some computations   A: x7
-There were issues with some computations   A: x8
-There were issues with some computations   A: x9
-There were issues with some computations   A: x10
-There were issues with some computations   A: x11
-There were issues with some computations   A: x12
-There were issues with some computations   A: x13
-There were issues with some computations   A: x14
-There were issues with some computations   A: x15
+> 
+> ## Find Best Tuning Parameters
+> bestTune <- CV_results %>%
++   select_best("roc_auc")
+> 
+> ## Finalize the Workflow & fit it
+> final_wf <-
++   nb_wf %>%
++   finalize_workflow(bestTune) %>%
++   fit(data=ama_train)
+> 
+> ## Predict
+> ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
++   mutate( Id = row_number()) %>%
++   rename(Action=.pred_1) %>%
++   select(Id, Action)
+> vroom_write(x=ama_predictions, file="./PCAnaiveBayes.csv", delim=",")
+> #stopCluster(cl)
+> 
+> proc.time()
+   user  system elapsed 
+316.461   1.565 162.436 
