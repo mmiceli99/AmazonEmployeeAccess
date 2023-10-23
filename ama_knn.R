@@ -23,7 +23,9 @@ my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
   step_other(all_nominal_predictors(), threshold = .001) %>%
   step_normalize() %>%# combines categorical values that occur <5% into an "other" value
   #step_dummy(all_nominal_predictors()) %>% # dummy variable encoding
-  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) #target encoding
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>% #target encoding
+  step_normalize(all_predictors()) %>%
+  step_pca(all_predictors(), threshold=.9) #Threshold is between 0 and 1#target encoding
 # also step_lencode_glm() and step_lencode_bayes()
 
 
@@ -69,5 +71,5 @@ ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
   mutate( Id = row_number()) %>%
   rename(Action=.pred_1) %>%
   select(Id, Action)
-vroom_write(x=ama_predictions, file="./knn.csv", delim=",")
+vroom_write(x=ama_predictions, file="./pcaknn.csv", delim=",")
 stopCluster(cl)
