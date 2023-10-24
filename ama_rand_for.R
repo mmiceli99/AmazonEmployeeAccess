@@ -5,7 +5,7 @@ library(embed)
 library(doParallel)
 
 #parallel::detectCores() #How many cores do I have?
-cl <- makePSOCKcluster(10) # num_cores to use
+cl <- makePSOCKcluster(50) # num_cores to use
 registerDoParallel(cl)
 
 
