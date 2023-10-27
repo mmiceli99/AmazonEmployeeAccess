@@ -84,7 +84,7 @@ svmRadial <- svm_rbf(rbf_sigma=tune(), cost=tune()) %>% # set or tune
 
 Radial_wf <- workflow() %>%
   add_recipe(my_recipe) %>%
-  add_model(svmRadial_model)
+  add_model(svmRadial)
 ## Grid of values to tune over
 tuning_grid <- grid_regular(rbf_sigma(), cost(),
                             levels = 5) ## L^2 total tuning possibilities
@@ -124,7 +124,7 @@ svmLinear <- svm_linear(cost=tune()) %>% # set or tune
 
 Linear_wf <- workflow() %>%
   add_recipe(my_recipe) %>%
-  add_model(svmRadial_model)
+  add_model(svmLinear)
 ## Grid of values to tune over
 tuning_grid <- grid_regular(cost(),
                             levels = 5) ## L^2 total tuning possibilities
