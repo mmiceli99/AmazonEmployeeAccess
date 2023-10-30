@@ -3,9 +3,10 @@ library(tidyverse)
 library(tidymodels)
 library(embed)
 library(doParallel)
+library(themis)
 
 #parallel::detectCores() #How many cores do I have?
-cl <- makePSOCKcluster(50) # num_cores to use
+cl <- makePSOCKcluster(13) # num_cores to use
 registerDoParallel(cl)
 
 
@@ -16,11 +17,11 @@ ama_train <- ama_train %>%
   mutate(ACTION = as.factor(ACTION))
 my_recipe <- recipe(ACTION ~ ., data=ama_train) %>%
   step_mutate_at(all_numeric_predictors(), fn = factor) %>% # turn all numeric features into factors
-  #step_rm(ROLE_ROLLUP_1, ROLE_ROLLUP_2) %>%
-  #step_mutate_at(ACTION, fn = factor) %>%
-  step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
+
+  #step_other(all_nominal_predictors(), threshold = .001) %>% # combines categorical values that occur <5% into an "other" value
   #step_dummy(all_nominal_predictors()) %>% # dummy variable encoding
-  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) #target encoding
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) #%>% #target encoding
+  #step_smote(all_outcomes(), k=2)
 # also step_lencode_glm() and step_lencode_bayes()
 
 
@@ -33,7 +34,7 @@ baked <- bake(prep, new_data = ama_train)
 
 my_mod <- rand_forest(mtry = tune(),
                       min_n=tune(),
-                      trees=500) %>%
+                      trees=1000) %>%
             set_engine("ranger") %>%
             set_mode("classification")
 
