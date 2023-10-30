@@ -65,7 +65,7 @@ Type 'q()' to quit R.
 ✖ dplyr::lag()      masks stats::lag()
 ✖ yardstick::spec() masks readr::spec(), vroom::spec()
 ✖ recipes::step()   masks stats::step()
-• Learn how to get started at https://www.tidymodels.org/start/
+• Use suppressPackageStartupMessages() to eliminate package startup messages
 > library(embed)
 > library(discrim)
 
@@ -154,33 +154,3 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 +   tune_grid(resamples=folds,
 +             grid=tuning_grid,
 +             metrics=metric_set(roc_auc)) #Or leave metrics NULL
-> 
-> ## Find Best Tuning Parameters
-> bestTune <- CV_results %>%
-+   select_best("roc_auc")
-> 
-> ## Finalize the Workflow & fit it
-> final_wf <-
-+   Poly_wf %>%
-+   finalize_workflow(bestTune) %>%
-+   fit(data=ama_train)
-> 
-> ## Predict
-> ama_predictions <- predict(final_wf, new_data=ama_test, type='prob') %>%
-+   mutate( Id = row_number()) %>%
-+   rename(Action=.pred_1) %>%
-+   select(Id, Action)
-> vroom_write(x=ama_predictions, file="./svmPoly.csv", delim=",")
-> 
-> #########################################################################################
-> 
-> #radial model
-> svmRadial <- svm_rbf(rbf_sigma=tune(), cost=tune()) %>% # set or tune
-+   set_mode("classification") %>%
-+   set_engine("kernlab")
-> 
-> Radial_wf <- workflow() %>%
-+   add_recipe(my_recipe) %>%
-+   add_model(svmRadial_model)
-Error: object 'svmRadial_model' not found
-Execution halted
